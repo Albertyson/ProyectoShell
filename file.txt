@@ -1,0 +1,5 @@
+total 36
+-rw-rw-r-- 1 alberto alberto     0 sep 12 18:57 file.txt
+-rwxrwxr-x 1 alberto alberto 22040 sep 12 10:27 syscalls
+-rw-r----- 1 alberto alberto  4444 sep 12 10:25 syscalls.cpp
+heyey
