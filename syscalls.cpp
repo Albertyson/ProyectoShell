@@ -78,7 +78,7 @@ namespace shell {
 	void rmdir_R(const string& comando);
 	void rm(const string& comando);
 	string argumento_comando(const string& comando);
-	void ls(const string& comando);
+	string ls(const string& comando);
 	void chmod(const string& comando);
 	string uname(const string& comando);
 	bool es_valido(const string& comando){
@@ -117,7 +117,7 @@ namespace shell {
 			rm(comando);
 		else if (nombre == "ls")
 			// ejecutar comando ls
-			ls(comando);
+			miSh+="\n"+ls(comando);
 		else if (nombre == "chmod")
 			chmod(comando);
 		else if (nombre == "uname")
@@ -204,18 +204,16 @@ namespace shell {
 		return "";
 	}
 
-	void ls(const string& comando)
+	string ls(const string& comando)
 	{
 		// obtener los nombres de los archivos presentes
 		//ver archivos
-	
-
 		FILE* fp;
 		char result [1000];
 		fp = popen("ls -al .","r");
 		fread(result,1,sizeof(result),fp);
 		fclose (fp);
-		cout<<("%s",result)<<endl;
+		return std::string(result, std::find(result, result + 1000, '\0'));
 	}
 
 	void chmod(const string& comando){
