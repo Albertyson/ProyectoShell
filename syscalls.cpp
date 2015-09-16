@@ -75,14 +75,14 @@ namespace shell {
 	string pwd(const string& comando);
 	void mkdir(const string& comando);
 	void rmdir(const string& comando);
-	//void rmdirR(const string& comando);
+	void rmdir_R(const string& comando);
 	void rm(const string& comando);
 	string argumento_comando(const string& comando);
 	void ls(const string& comando);
 	void chmod(const string& comando);
 	string uname(const string& comando);
 	bool es_valido(const string& comando){
-		vector<string> comandos_validos {"mkdir", "rmdir","rmdir_-R", "rm", "exit","pwd","ls","chmod","uname"};
+		vector<string> comandos_validos {"mkdir", "rmdir","rmdir -r", "rm", "exit","pwd","ls","chmod","uname"};
 		// si el nombre del comando está en la lista de comandos válidos
 		string nombre = nombre_comando(comando);
 		vector<string>::iterator busqueda_comando = find(comandos_validos.begin(), comandos_validos.end(), nombre);
@@ -108,9 +108,9 @@ namespace shell {
 			// ejecutar comando rmdir
 			rmdir(comando);
 		// si comando es "rmdir -R"
-		/*else if (nombre == "rmdir_-R")
+		else if (nombre == "rmdir -r")
 			// ejecutar comando rmdir
-			rmdirR(comando);*/
+			rmdir_R(comando);
 		// sino si el comando es "rm"
 		else if (nombre == "rm")
 			// ejecutar comando rm
@@ -161,13 +161,16 @@ namespace shell {
 		::rmdir(directorio.c_str());
 	}
 
-	/*void rmdirR(const string& comando)
+	void rmdir_R(const string& comando)
 	{
-		// obtener el nombre del directorio
-		string directorio = argumento_comando(comando);
-		// eliminar el directorio invocando la llamada del sistema (system call)
-		::rmdir(directorio.c_str());
-	}*/
+		FILE* fp;
+		char result [1000];
+        fp = popen("rmdir -r .","r");
+        fread(result,1,sizeof(result),fp);
+        fclose (fp);
+        cout<<("%s",result)<<endl;
+
+	}
 
 	void rm(const string& comando)
 	{
