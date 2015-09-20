@@ -72,7 +72,7 @@ int main()
 
 namespace shell {
 	string nombre_comando(const string& comando);
-	string pwd(const string& comando);
+	string pwd();
 	void mkdir(const string& comando);
 	void rmdir(const string& comando);
 	void rmdir_R(const string& comando);
@@ -102,7 +102,7 @@ namespace shell {
 		// si comando es "pwd"
 		else if (nombre == "pwd")
 			// ejecutar comando rmdir
-			miSh+="\n"+pwd(comando);
+			miSh+="\n"+pwd();
 		// si comando es "rmdir"
 		else if (nombre == "rmdir")
 			// ejecutar comando rmdir
@@ -139,7 +139,7 @@ namespace shell {
 			return "";
 	}
 
-	string pwd(const string& comando)
+	string pwd()
 	{
 		string path = getenv("PWD");
 		return path;
@@ -231,8 +231,54 @@ namespace shell {
 			strcpy(copiaParser, parserEspecial.c_str());
 			char* nombreArchivo = strtok(copiaComando, copiaParser);
 			//Cambiar permisos
+			string path=pwd()+"/"+string{nombreArchivo};
+			std::size_t found=permisos.find("u");
+			if(found!=std::string::npos){//si encuentra el caracter u:usuario
+				found=permisos.find("r");
+				if(found!=std::string::npos){//si encuentra el caracter r:lectura
+					::chmod(path.c_str(),S_IRUSR);
+				}
+				found=permisos.find("w");
+				if(found!=std::string::npos){//si encuentra el caracter w:escritura
+					::chmod(path.c_str(),S_IWUSR);
+				}
+				found=permisos.find("x");
+				if(found!=std::string::npos){//si encuentra el caracter x:ejecucion
+					::chmod(path.c_str(),S_IXUSR);
+				}
+			}
+			found=permisos.find("g");
+			if(found!=std::string::npos){//si encuentra el caracter g:group
+				found=permisos.find("r");
+				if(found!=std::string::npos){//si encuentra el caracter r:lectura
+					::chmod(path.c_str(),S_IRGRP);
+				}
+				found=permisos.find("w");
+				if(found!=std::string::npos){//si encuentra el caracter w:escritura
+					::chmod(path.c_str(),S_IWGRP);
+				}
+				found=permisos.find("x");
+				if(found!=std::string::npos){//si encuentra el caracter x:ejecucion
+					::chmod(path.c_str(),S_IXGRP);
+				}
+			}
+			found=permisos.find("o");
+			if(found!=std::string::npos){//si encuentra el caracter o:other
+				found=permisos.find("r");
+				if(found!=std::string::npos){//si encuentra el caracter r:lectura
+					::chmod(path.c_str(),S_IROTH);
+				}
+				found=permisos.find("w");
+				if(found!=std::string::npos){//si encuentra el caracter w:escritura
+					::chmod(path.c_str(),S_IWOTH);
+				}
+				found=permisos.find("x");
+				if(found!=std::string::npos){//si encuentra el caracter x:ejecucion
+					::chmod(path.c_str(),S_IXOTH);
+				}
+			}
 		}else{
-			printw("Error: Los permisos no son correctos\nComo usar el comando: chmod <u|g|o|a><MAS|MENOS><r|w|x>\n\tu:Usuario\n\tg:Grupo\n\to:Otros\n\ta:Todos\n\tMAS:Agregar\n\tMENOS:Quitar\n\tr:Lectura\n\tw:Escritura\n\tx:Ejecucion\n\tPulse una tecla para continuar...");
+			miSh+="\nError: Los permisos no son correctos\nComo usar el comando: chmod <u|g|o|a><MAS|MENOS><r|w|x>\n\tu:Usuario\n\tg:Grupo\n\to:Otros\n\ta:Todos\n\tMAS:Agregar\n\tMENOS:Quitar\n\tr:Lectura\n\tw:Escritura\n\tx:Ejecucion\n\tPulse una tecla para continuar...\n";
 			getch();
 		}
 	}
