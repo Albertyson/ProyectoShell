@@ -271,18 +271,20 @@ namespace shell {
 	{
 		// obtener los nombres de los archivos presentes
 		//ver archivos
-		  DIR *dp;
-		  struct dirent *ep;
-
-		  dp = opendir ("./");
-		  if (dp != NULL)
-		    {
-		      while (ep = readdir (dp))
-			puts (ep->d_name);
-		      (void) closedir (dp);
-		    }
-		  else
-		    perror ("Couldn't open the directory");
+		DIR *dp;
+		struct dirent *ep;
+		dp = opendir ("./");
+		if (dp != NULL){
+			string files="";
+			while (ep = readdir (dp)){
+				files+=ep->d_name;
+				files+="\n";
+			}
+			(void) closedir (dp);
+			return files;
+		}else{
+			return "Couldn't open the directory";
+		}
 	}
 
 	void chmod(const string& comando){
