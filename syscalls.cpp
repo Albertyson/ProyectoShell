@@ -15,6 +15,7 @@
 #include <regex>
 #include <curses.h>
 #include <sstream>
+#include <dirent.h>
 #define ENTER 10
 #define BACKSPACE 127
 #define TAB 9
@@ -76,13 +77,21 @@ namespace shell {
 	void mkdir(const string& comando);
 	void rmdir(const string& comando);
 	void rmdir_R(const string& comando);
+	void delete_folder_tree(const char* directory_name);
+	int path_is_directory(const char* path);
 	void rm(const string& comando);
 	string argumento_comando(const string& comando);
+	string opcion_comando(const string& comando);
+	void rmdir_R(const string& comando);
+	void delete_folder_tree(const char* directory_name);
+	int path_is_directory(const char* path);
 	string ls(const string& comando);
 	void chmod(const string& comando);
 	string uname(const string& comando);
+
+
 	bool es_valido(const string& comando){
-		vector<string> comandos_validos {"mkdir", "rmdir","rmdir -r", "rm", "exit","pwd","ls","chmod","uname"};
+		vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname"};
 		// si el nombre del comando está en la lista de comandos válidos
 		string nombre = nombre_comando(comando);
 		vector<string>::iterator busqueda_comando = find(comandos_validos.begin(), comandos_validos.end(), nombre);
@@ -105,12 +114,14 @@ namespace shell {
 			miSh+="\n"+pwd(comando);
 		// si comando es "rmdir"
 		else if (nombre == "rmdir")
-			// ejecutar comando rmdir
-			rmdir(comando);
-		// si comando es "rmdir -R"
-		else if (nombre == "rmdir -r")
-			// ejecutar comando rmdir
-			rmdir_R(comando);
+			{
+				// ejecutar comando rmdir
+				if (nombre == "-R")
+				   rmdir_R(comando);
+				else
+				    rmdir(comando);
+			}	
+		
 		// sino si el comando es "rm"
 		else if (nombre == "rm")
 			// ejecutar comando rm
@@ -161,16 +172,6 @@ namespace shell {
 		::rmdir(directorio.c_str());
 	}
 
-	void rmdir_R(const string& comando)
-	{
-		FILE* fp;
-		char result [1000];
-        fp = popen("rmdir -r .","r");
-        fread(result,1,sizeof(result),fp);
-        fclose (fp);
-        cout<<("%s",result)<<endl;
-
-	}
 
 	void rm(const string& comando)
 	{
@@ -204,16 +205,84 @@ namespace shell {
 		return "";
 	}
 
+	string opcion_comando(const string& comando)
+	{
+		
+		char cadena_comando[comando.size()];
+		strcpy(cadena_comando, comando.c_str());
+		// leer el primer token del comando
+		char* token = strtok(cadena_comando, " ");
+
+		// mientras no se haya encontrado el fin del comando
+		while (token != NULL) {
+			// leer el siguient token
+			token = strtok(NULL, " ");
+			// si el token actual es una opción
+			if (token[0] == '-')
+				// devolver el token actual
+				return string {token};
+		}
+
+		// devolver cadena vacía
+		return "";
+
+	}
+
+
+	void rmdir_R(const string& comando)
+	{
+		// obtener el nombre del directorio
+		string directorio = argumento_comando(comando);
+		delete_folder_tree(directorio.c_str());
+		
+	}
+
+
+	void delete_folder_tree(const char* directory_name){
+		 DIR*            dp;
+		 struct dirent*  ep;
+		 char            p_buf[512] = {0};
+
+		 dp = opendir(directory_name);
+
+		 while ((ep = readdir(dp)) != NULL) {
+		 cout<<(p_buf, "%s/%s", directory_name, ep->d_name)<<endl;
+		 if (path_is_directory(p_buf))
+		     delete_folder_tree(p_buf);
+		 else
+		     unlink(p_buf);
+	     	 }
+
+		closedir(dp);
+		rmdir(directory_name);
+
+	}
+
+	int path_is_directory (const char* path) {
+	    struct stat s_buf;
+
+	    if (stat(path, &s_buf))
+	        return 0;
+
+	    return S_ISDIR(s_buf.st_mode);
+	}
+
 	string ls(const string& comando)
 	{
 		// obtener los nombres de los archivos presentes
 		//ver archivos
-		FILE* fp;
-		char result [1000];
-		fp = popen("ls -al .","r");
-		fread(result,1,sizeof(result),fp);
-		fclose (fp);
-		return std::string(result, std::find(result, result + 1000, '\0'));
+		  DIR *dp;
+		  struct dirent *ep;
+
+		  dp = opendir ("./");
+		  if (dp != NULL)
+		    {
+		      while (ep = readdir (dp))
+			puts (ep->d_name);
+		      (void) closedir (dp);
+		    }
+		  else
+		    perror ("Couldn't open the directory");
 	}
 
 	void chmod(const string& comando){
