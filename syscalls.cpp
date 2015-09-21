@@ -16,6 +16,8 @@
 #include <curses.h>
 #include <sstream>
 #include <dirent.h>
+#include <fcntl.h>
+#include <fstream>
 #define ENTER 10
 #define BACKSPACE 127
 #define TAB 9
@@ -24,9 +26,11 @@ namespace shell {
 	bool es_valido(const std::string& comando);
 	string leer_comando();
 	void ejecutar_comando(const string& comando);
+	void autoCompletar(string& comando);
 }
 using namespace std;
 string miSh="Mi_sh>";
+bool salir=false;
 int main()
 {
 	using namespace std;
@@ -37,12 +41,12 @@ int main()
 	comando = "";
 	char key;
 	// mientras el comando exit no se haya ingresado
-	while (comando != "exit") {
+	while (!salir) {
 		erase();
 		printw(miSh.c_str());
 		key=getch();
 		if(key==TAB){
-
+			autoCompletar(comando);
 		}else if(key==ENTER){
 			if(es_valido(comando)){
 				// ejecutar comando leído
@@ -88,10 +92,11 @@ namespace shell {
 	string ls(const string& comando);
 	void chmod(const string& comando);
 	string uname(const string& comando);
-
+	string salidaDeComando(const string& comando);
+	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname"};
 
 	bool es_valido(const string& comando){
-		vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname"};
+		
 		// si el nombre del comando está en la lista de comandos válidos
 		string nombre = nombre_comando(comando);
 		vector<string>::iterator busqueda_comando = find(comandos_validos.begin(), comandos_validos.end(), nombre);
@@ -103,36 +108,139 @@ namespace shell {
 
 	void ejecutar_comando(const string& comando)
 	{
+		std::size_t found=comando.find(">>");
+		if(found!=std::string::npos){// encuentra >>
+			char cadena_comando[comando.size()];
+			strcpy(cadena_comando, comando.c_str());
+			// leer el primer token del comando
+			char* token = strtok(cadena_comando, ">>");
+			// mientras no se haya encontrado el fin del comando
+			if (token != NULL) {
+				// leer el siguient token
+				token = strtok(NULL, ">>");
+				if(token!=NULL){
+					//pasar la salida a un archivo, token tiene el nombre del archivo
+					std::ofstream outfile;
+					outfile.open(token, std::ios_base::app);
+					outfile << salidaDeComando(comando); 
+				}else{//error falta argumento
+					miSh+="Error falta argumento\n";				
+				}
+			}
+			return;
+		}
+		found=comando.find(">");
+		if(found!=std::string::npos){// encuentra >
+			//parsear por >
+			char cadena_comando[comando.size()];
+			strcpy(cadena_comando, comando.c_str());
+			// leer el primer token del comando
+			char* token = strtok(cadena_comando, ">");
+			// mientras no se haya encontrado el fin del comando
+			if (token != NULL) {
+				// leer el siguient token
+				token = strtok(NULL, ">");
+				if(token!=NULL){
+					//pasar la salida a un archivo, token tiene el nombre del archivo
+					int fd;
+				    int defout;				 
+				    if ((defout = dup(1)) < 0){
+				        fprintf(stderr, "Can't dup(2) - (%s)\n", strerror(errno));
+				        exit(1);
+				    }
+				    if ((fd = open(token, O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR)) < 0){
+				        fprintf(stderr, "Can't open(2) - (%s)\n", strerror(errno)); exit(1);
+				    }
+				    if (dup2(fd, 1) < 0) // redireccionar la salida al archivo
+				    {
+				        fprintf(stderr, "Can't dup2(2) - (%s)\n", strerror(errno)); exit(1);
+				    }
+				    close(fd);  //Cerrar archivo
+				    if (puts(salidaDeComando(comando).c_str()) < 0)
+				    {
+				        fprintf(stderr, "Can't printf(3) to fd=%d - (%s)\n", fileno(stdout), strerror(errno)); exit(1);
+				    }
+				    fflush(stdout);// flush el output al archivo
+				    // Ahora stdout esta limpio para otro uso
+				    if (dup2(defout, 1) < 0) // redireccionar el output de nuevo a stdout
+				    {
+				        fprintf(stderr, "Can't dup2(2) - (%s)\n", strerror(errno)); exit(1);
+				    }
+				    close(defout);  // La copia de stdout no se necesita mas
+				    return;
+				}else{//error falta argumento
+					miSh+="Error falta argumento\n";				
+				}
+			}
+			return;
+		}
+		found=comando.find("|");
+		if(found!=std::string::npos){// encuentra |
+			//parsear por |
+			char cadena_comando[comando.size()];
+			strcpy(cadena_comando, comando.c_str());
+			// leer el primer token del comando
+			char* token = strtok(cadena_comando, "|");
+			// mientras no se haya encontrado el fin del comando
+			if (token != NULL) {
+				// leer el siguient token
+				token = strtok(NULL, "|");
+				if(token!=NULL){
+					//pasar la salida a el siguiente comando
+					ejecutar_comando(salidaDeComando(token));
+				}else{//error falta argumento
+					miSh+="Error falta argumento\n";				
+				}
+			}
+			return;
+		}else{//si no encuentra > ni |
+			miSh+=salidaDeComando(comando);
+		}
+		
+	}
+
+	string salidaDeComando(const string& comando){
 		string nombre = nombre_comando(comando);
 		// si comando es "mkdir"
-		if (nombre == "mkdir")
+		if (nombre == "mkdir"){
 			// ejecutar comando mkdir
 			mkdir(comando);
+			return "";
+		}
 		// si comando es "pwd"
-		else if (nombre == "pwd")
+		else if (nombre == "pwd"){
 			// ejecutar comando rmdir
-			miSh+="\n"+pwd();
+			return pwd();
+		}
 		// si comando es "rmdir"
-		else if (nombre == "rmdir")
-			{
-				// ejecutar comando rmdir
-				if (nombre == "-R")
-				   rmdir_R(comando);
-				else
-				    rmdir(comando);
-			}	
-		
+		else if (nombre == "rmdir"){
+		    rmdir(comando);
+		    return "";
+		}else if (nombre =="rmdir -r"){
+			rmdir_R(comando);
+			return "";
+		}
 		// sino si el comando es "rm"
-		else if (nombre == "rm")
+		else if (nombre == "rm"){
 			// ejecutar comando rm
 			rm(comando);
-		else if (nombre == "ls")
+			return "";
+		}
+		else if (nombre == "ls"){
 			// ejecutar comando ls
-			miSh+="\n"+ls(comando);
-		else if (nombre == "chmod")
+			return ls(comando);
+		}
+		else if (nombre == "chmod"){
 			chmod(comando);
-		else if (nombre == "uname")
-			miSh+="\n"+uname(comando);
+			return "";
+		}
+		else if (nombre == "uname"){
+			return uname(comando);
+		}else if (nombre == "exit"){
+			salir=true;
+			return "";
+		}
+		return "";
 	}
 
 	string nombre_comando(const string& comando)
@@ -222,7 +330,6 @@ namespace shell {
 				// devolver el token actual
 				return string {token};
 		}
-
 		// devolver cadena vacía
 		return "";
 
@@ -372,6 +479,24 @@ namespace shell {
 			}
 		}
 		return retVal;
+	}
+	void autoCompletar(string& comando){
+		for(int i=0;i<comandos_validos.size();i++){
+			string comandoActual=comandos_validos.at(i);
+			/*std::size_t found=comandoActual.find(comando.c_str());
+			if(found!=std::string::npos){
+				miSh = miSh.substr(0, miSh.length()-comando.length());
+				comando=comandos_validos.at(i).c_str();
+				miSh+=comando;
+				break;
+			}*/
+			if(comando.substr(0,comando.length())==comandoActual.substr(0,comando.length())){
+				miSh = miSh.substr(0, miSh.length()-comando.length());
+				comando=comandos_validos.at(i).c_str();
+				miSh+=comando;
+				break;
+			}
+		}
 	}
 
 }
