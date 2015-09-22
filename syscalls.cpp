@@ -18,6 +18,9 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
 #define ENTER 10
 #define BACKSPACE 127
 #define TAB 9
@@ -99,7 +102,7 @@ namespace shell {
 	string ps(const string& comando);
 	string uname(const string& comando);
 	void ln(const string& comando);
-	void kill(const string& comando);
+	void myKill(const string& comando);
 	string salidaDeComando(const string& comando);
 	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname","cd","cat","clear","ps","ln","kill"};
 
@@ -265,10 +268,12 @@ namespace shell {
 		}else if (nombre == "ps"){
 			return ps(comando);
 		}else if (nombre == "ln"){
-			 return ln(comando);			
+			 ln(comando);
+			 return "";
 		}
 		else if (nombre == "kill"){
-			return kill(comando);
+			 myKill(comando);
+			 return "";
 		}
 		return "";
 	}
@@ -597,54 +602,55 @@ namespace shell {
 		return retVal;
 	}
 
-	void ln(const string& comando){
-        string flag = argumento_comando(comando);
-		string argumento1 = argumento_comando(comando);
-		string argumento2 = argumento_comando(comando);
-		const char* argument1;
-		const char* argument2;
-		
-		
-         if(flag.lenght()>0){
-         	if(flag=="-s"){
-         		argument1 = argumento1.c_str();
-         		argument2 = argumento2.c_str();
-         		int slink = symlink(argument1, argument2);
-         		if(slink==0){
-                  printf("El link simbolico ha sido creado\n");
-         		}else{
-         		  printw("Error: El link simbolico no ha podido ser creado")	
-         		}
-         	}else{
-         		argument1 = flag.c_str();
-         		argument2 = argumento1.c_str();
-         	    int lk = link(argument1, argument2);
-         	    if(lk==0){
-         	    	printf("El link en duro ha sido creado\n");
-         	    }else{
-         	    	printw("Error: El link en duro no ha podido ser creado")
-         	    }
-         	}
-         
-         	
-         }
-    }
-
-    void kill(const string& comando){
+void ln(const string& comando){
+	string nombreComando="ln ";
 	string flag = argumento_comando(comando);
+	string argumento1 = argumento_comando(comando.substr(nombreComando.length()+flag.length()-1,
+										  comando.length()-nombreComando.length()-flag.length()));
+	string argumento2 = argumento_comando(comando.substr(nombreComando.length()+flag.length()+argumento1.length(),
+										  comando.length()-nombreComando.length()-flag.length()-argumento1.length()));
+	const char* argument1;
+	const char* argument2;
+	if(flag.length()>0){
+		if(flag=="-s"){
+			argument1 = argumento1.c_str();
+			argument2 = argumento2.c_str();
+			int slink = symlink(argument1, argument2);
+			if(slink==0){
+				printw("El link simbolico ha sido creado\n");
+				getch();
+			}else{
+				printw("Error: El link simbolico no ha podido ser creado");
+				getch();
+			}
+		}else{
+			argument1 = flag.c_str();
+			argument2 = argumento1.c_str();
+			int lk = link(argument1, argument2);
+			if(lk==0){
+				printw("El link en duro ha sido creado\n");
+				getch();
+			}else{
+				printw("Error: El link en duro no ha podido ser creado");
+				getch();
+			}
+		}
+	}
+}
+
+void myKill(const string& comando){
+	string flag = "-9";//argumento_comando(comando);
 	string PID = argumento_comando(comando);
 	int id = atoi(PID.c_str());
 	int sig = -9;
 	pid_t pid = (pid_t)id;
-	
-       if(flag.lenght()>0){
-       	 if(flag == '-9'){
-       	 	kill(pid, SIGKILL);
-       	 }else{
-       	 	printw("Error: El proceso %d no ha podido ser eliminado", pid )
-       	 }
-       }
-    
-    }         
+	if(flag.length()>0){
+		if(flag == "-9"){
+			kill(pid, SIGKILL);
+		}else{
+			printw("Error: El proceso %d no ha podido ser eliminado", pid );
+		}
+	}    
+}         
 
 }
