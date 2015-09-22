@@ -90,7 +90,6 @@ namespace shell {
 	void rm(const string& comando);
 	string argumento_comando(const string& comando);
 	string opcion_comando(const string& comando);
-	void rmdir_R(const string& comando);
 	void delete_folder_tree(const char* directory_name);
 	int path_is_directory(const char* path);
 	string ls(const string& comando);
@@ -233,12 +232,12 @@ namespace shell {
 			return pwd();
 		}
 		// si comando es "rmdir"
-		else if (nombre == "rmdir"){
-		    rmdir(comando);
-		    return "";
-		}else if (nombre =="rmdir -r"){
+		else if (comando.substr(0,8)=="rmdir -r"){
 			rmdir_R(comando);
 			return "";
+		}else if (nombre == "rmdir"){
+		    rmdir(comando);
+		    return "";
 		}else if (nombre == "rm"){
 			// ejecutar comando rm
 			rm(comando);
@@ -362,9 +361,14 @@ namespace shell {
 	void rmdir_R(const string& comando)
 	{
 		// obtener el nombre del directorio
-		string directorio = argumento_comando(comando);
-		delete_folder_tree(directorio.c_str());
-		
+		FILE* fp;
+		char result [1000];
+		string cmd="rm -r ";
+		string directorio=comando.substr(cmd.length(),comando.length()-cmd.length());
+		cmd+=directorio;
+        fp = popen(cmd.c_str(),"r");
+        fread(result,1,sizeof(result),fp);
+        fclose (fp);		
 	}
 
 
