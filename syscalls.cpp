@@ -25,7 +25,8 @@ namespace shell {
 	using namespace std;
 	bool es_valido(const std::string& comando);
 	string leer_comando();
-	void ejecutar_comando(const string& comando);
+	void ejecutar_comando(const string& comando,const string& entrada);
+	string dirActual;
 	void autoCompletar(string& comando);
 }
 using namespace std;
@@ -37,9 +38,12 @@ int main()
 	using namespace shell;
 	initscr();
 	string comando {};
-	miSh="Mi_sh>";
 	comando = "";
 	char key;
+	{string path = getenv("PWD");
+	 dirActual = path;
+	}
+	miSh="Mi_sh@"+dirActual+">";
 	// mientras el comando exit no se haya ingresado
 	while (!salir) {
 		erase();
@@ -50,21 +54,21 @@ int main()
 		}else if(key==ENTER){
 			if(es_valido(comando)){
 				// ejecutar comando leído
-				ejecutar_comando(comando);
+				ejecutar_comando(comando,"");
 				comando="";
-				miSh+="\nMi_sh>";
+				miSh+="Mi_sh@"+dirActual+">";
 			}else{
 				comando="";
-				miSh+="\nError:El comando no es valido\nMi_sh>";
+				miSh+="\nError:El comando no es valido\nMi_sh@"+dirActual+">";
 			}
 		}else if(key==BACKSPACE){
 			if( comando.length() > 0 ){
 				//borrar el ultimo caracter del comando
                 comando = comando.substr( 0, comando.length()-1);
                 //variable temporal para eliminar la ultima linea y sobreescribirla con el comando si el ultimo caracter
-                string linea="Mi_sh>" + comando;
+                string linea="Mi_sh@"+dirActual+">" + comando;
                 miSh=miSh.substr(0,miSh.length()-linea.length()-1);
-                miSh += "Mi_sh>" + comando;
+                miSh += "Mi_sh@"+dirActual+">" + comando;
             }
 		}else{//cualquier otra tecla
 			comando+=key;
@@ -91,12 +95,14 @@ namespace shell {
 	int path_is_directory(const char* path);
 	string ls(const string& comando);
 	void chmod(const string& comando);
+	string cd(const string& comando);
+	string cat(const string& comando);
+	
 	string uname(const string& comando);
 	string salidaDeComando(const string& comando);
-	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname"};
+	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname","cd","cat","clear"};
 
 	bool es_valido(const string& comando){
-		
 		// si el nombre del comando está en la lista de comandos válidos
 		string nombre = nombre_comando(comando);
 		vector<string>::iterator busqueda_comando = find(comandos_validos.begin(), comandos_validos.end(), nombre);
@@ -106,8 +112,22 @@ namespace shell {
 			return false;
 	}
 
-	void ejecutar_comando(const string& comando)
+	void ejecutar_comando(const string& comando,const string& entrada)
 	{
+		if(entrada!=""){
+			/*string cmd=comando+" | "+entrada;
+			//execl(arg1.c_str(), comando.c_str(), entrada.c_str());
+			FILE *pipe_fp;
+			 //Create one way pipe line with call to popen() 
+			if (( pipe_fp = popen(cmd.c_str(),"r")) == NULL){
+				perror("popen");
+				exit(1);
+			}
+			fputs(entrada.c_str(), pipe_fp);
+			//Close the pipe 
+			pclose(pipe_fp);*/
+			return;
+		}
 		std::size_t found=comando.find(">>");
 		if(found!=std::string::npos){// encuentra >>
 			char cadena_comando[comando.size()];
@@ -187,14 +207,14 @@ namespace shell {
 				token = strtok(NULL, "|");
 				if(token!=NULL){
 					//pasar la salida a el siguiente comando
-					ejecutar_comando(salidaDeComando(token));
+					ejecutar_comando(token,salidaDeComando(comando));
 				}else{//error falta argumento
 					miSh+="Error falta argumento\n";				
 				}
 			}
 			return;
-		}else{//si no encuentra > ni |
-			miSh+=salidaDeComando(comando);
+		}else{//si no encuentra > ni >> ni |
+			miSh+="\n"+salidaDeComando(comando);
 		}
 		
 	}
@@ -219,23 +239,25 @@ namespace shell {
 		}else if (nombre =="rmdir -r"){
 			rmdir_R(comando);
 			return "";
-		}
-		// sino si el comando es "rm"
-		else if (nombre == "rm"){
+		}else if (nombre == "rm"){
 			// ejecutar comando rm
 			rm(comando);
 			return "";
-		}
-		else if (nombre == "ls"){
+		}else if (nombre == "ls"){
 			// ejecutar comando ls
 			return ls(comando);
-		}
-		else if (nombre == "chmod"){
+		}else if (nombre == "chmod"){
 			chmod(comando);
 			return "";
-		}
-		else if (nombre == "uname"){
+		}else if (nombre == "cd"){
+			return cd(comando);
+		}else if (nombre == "cat"){
+			return cat(comando);
+		}else if (nombre == "uname"){
 			return uname(comando);
+		}else if (nombre == "clear"){
+			miSh="";
+			return "";
 		}else if (nombre == "exit"){
 			salir=true;
 			return "";
@@ -260,8 +282,7 @@ namespace shell {
 
 	string pwd()
 	{
-		string path = getenv("PWD");
-		return path;
+		return dirActual;
 	}
 
 	void mkdir(const string& comando)
@@ -380,7 +401,7 @@ namespace shell {
 		//ver archivos
 		DIR *dp;
 		struct dirent *ep;
-		dp = opendir ("./");
+		dp = opendir (dirActual.c_str());
 		if (dp != NULL){
 			string files="";
 			while (ep = readdir (dp)){
@@ -393,6 +414,59 @@ namespace shell {
 			return "Couldn't open the directory";
 		}
 	}
+	
+	//welch
+	string cd(const string& comando)
+	{	
+		if (argumento_comando(comando)== ".."){
+			for(int i = dirActual.size();i>0;i--){
+				if(dirActual.at(i-1) == '/'){
+					dirActual = dirActual.substr(0,i-1); 
+					return "";
+				}
+			}	
+		}
+		else { if (argumento_comando(comando)!=""){
+			struct stat sb;
+			
+			if (stat((dirActual +"/"+ argumento_comando(comando)).c_str(), &sb) == 0 && S_ISDIR(sb.st_mode))
+			{	
+			 dirActual = dirActual +"/"+ argumento_comando(comando);
+		   	 return "";
+			} 
+			else { return "No se pudo abrir el directorio, intente otra vez";
+			}
+
+			} 
+		
+		}
+		return "";
+	}
+
+	//cat
+
+	string cat(const string& comando)
+	{	
+		FILE * pFile;
+		   char buffer [81920];
+		   string retVal="";
+
+		   pFile = fopen ((dirActual+"/"+argumento_comando(comando)).c_str() , "r");
+		   if (pFile == NULL) perror ("Error opening file");
+		   else
+		   {
+		     while ( ! feof (pFile) )
+		     {
+		       if ( fgets (buffer , 81920 , pFile) == NULL ) break;
+		       retVal+=buffer;
+		     }
+		     fclose (pFile);
+		   }
+		
+
+		return retVal;
+	}
+	
 
 	void chmod(const string& comando){
 		//obtener los permisos para el archivo
@@ -403,13 +477,9 @@ namespace shell {
 			//Los permisos han sido bien escritos
 			//Obtener el nombre del archivo
 			string parserEspecial="chmod "+permisos+" ";
-			char copiaComando[comando.size()];
-			strcpy(copiaComando, comando.c_str());
-			char copiaParser[parserEspecial.size()];
-			strcpy(copiaParser, parserEspecial.c_str());
-			char* nombreArchivo = strtok(copiaComando, copiaParser);
+			string nombreArchivo=comando.substr(parserEspecial.length(),comando.length()-parserEspecial.length());
 			//Cambiar permisos
-			string path=pwd()+"/"+string{nombreArchivo};
+			string path=pwd()+"/"+nombreArchivo;
 			std::size_t found=permisos.find("u");
 			if(found!=std::string::npos){//si encuentra el caracter u:usuario
 				found=permisos.find("r");
