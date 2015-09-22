@@ -98,8 +98,10 @@ namespace shell {
 	string cat(const string& comando);
 	string ps(const string& comando);
 	string uname(const string& comando);
+	void ln(const string& comando);
+	void kill(const string& comando);
 	string salidaDeComando(const string& comando);
-	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname","cd","cat","clear","ps"};
+	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname","cd","cat","clear","ps","ln","kill"};
 
 	bool es_valido(const string& comando){
 		// si el nombre del comando está en la lista de comandos válidos
@@ -262,6 +264,11 @@ namespace shell {
 			return "";
 		}else if (nombre == "ps"){
 			return ps(comando);
+		}else if (nombre == "ln"){
+			 return ln(comando);			
+		}
+		else if (nombre == "kill"){
+			return kill(comando);
 		}
 		return "";
 	}
@@ -589,5 +596,55 @@ namespace shell {
 		} 
 		return retVal;
 	}
+
+	void ln(const string& comando){
+        string flag = argumento_comando(comando);
+		string argumento1 = argumento_comando(comando);
+		string argumento2 = argumento_comando(comando);
+		const char* argument1;
+		const char* argument2;
+		
+		
+         if(flag.lenght()>0){
+         	if(flag=="-s"){
+         		argument1 = argumento1.c_str();
+         		argument2 = argumento2.c_str();
+         		int slink = symlink(argument1, argument2);
+         		if(slink==0){
+                  printf("El link simbolico ha sido creado\n");
+         		}else{
+         		  printw("Error: El link simbolico no ha podido ser creado")	
+         		}
+         	}else{
+         		argument1 = flag.c_str();
+         		argument2 = argumento1.c_str();
+         	    int lk = link(argument1, argument2);
+         	    if(lk==0){
+         	    	printf("El link en duro ha sido creado\n");
+         	    }else{
+         	    	printw("Error: El link en duro no ha podido ser creado")
+         	    }
+         	}
+         
+         	
+         }
+    }
+
+    void kill(const string& comando){
+	string flag = argumento_comando(comando);
+	string PID = argumento_comando(comando);
+	int id = atoi(PID.c_str());
+	int sig = -9;
+	pid_t pid = (pid_t)id;
+	
+       if(flag.lenght()>0){
+       	 if(flag == '-9'){
+       	 	kill(pid, SIGKILL);
+       	 }else{
+       	 	printw("Error: El proceso %d no ha podido ser eliminado", pid )
+       	 }
+       }
+    
+    }         
 
 }
