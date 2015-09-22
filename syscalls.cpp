@@ -97,10 +97,10 @@ namespace shell {
 	void chmod(const string& comando);
 	string cd(const string& comando);
 	string cat(const string& comando);
-	
+	string ps(const string& comando);
 	string uname(const string& comando);
 	string salidaDeComando(const string& comando);
-	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname","cd","cat","clear"};
+	vector<string> comandos_validos {"mkdir", "rmdir", "rm", "exit","pwd","ls","chmod","uname","cd","cat","clear","ps"};
 
 	bool es_valido(const string& comando){
 		// si el nombre del comando está en la lista de comandos válidos
@@ -261,6 +261,8 @@ namespace shell {
 		}else if (nombre == "exit"){
 			salir=true;
 			return "";
+		}else if (nombre == "ps"){
+			return ps(comando);
 		}
 		return "";
 	}
@@ -567,6 +569,21 @@ namespace shell {
 				break;
 			}
 		}
+	}
+
+	string ps(const string& comando){
+		FILE *ptr = popen( comando.c_str(), "r" );
+		string retVal="";
+		char buffer[8292];
+		if( NULL != ptr ){
+			while( ! feof (ptr) )
+			{
+				if ( fgets (buffer , sizeof( buffer ) , ptr) == NULL ) break;
+				retVal+=buffer;
+			}
+			pclose( ptr );
+		} 
+		return retVal;
 	}
 
 }
